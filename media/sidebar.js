@@ -96,7 +96,11 @@ function onAuthState(auth) {
   const u = auth.user;
   if (u) {
     userName.textContent = u.name || "Member";
-    userRole.textContent = u.role === "admin" ? "Admin" : "Member";
+    
+    const plan = (u.accountType || "free").toLowerCase();
+    userRole.textContent = plan.toUpperCase() + " PLAN";
+    userRole.className = `user-role plan-badge plan-${plan}`;
+    
     if (u.avatarUrl) {
       userAvatar.innerHTML = `<img src="${esc(u.avatarUrl)}" alt="Avatar" class="mini-avatar-img" style="width:32px; height:32px; border-radius:50%;" />`;
     } else {
