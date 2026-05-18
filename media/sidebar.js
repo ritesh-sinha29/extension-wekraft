@@ -367,6 +367,9 @@ const TASK_PRIORITIES = ["high", "medium", "low"];
 const ISSUE_PRIORITIES = ["critical", "medium", "low"];
 
 function openEditPanel(type, id) {
+  editTitle.disabled = false;
+  btnSaveEdit.disabled = false;
+
   let item = null;
   if (id) {
     item = type === "task"
@@ -512,6 +515,12 @@ function saveEdit() {
     return;
   }
 
+  const item = id
+    ? (type === "task"
+        ? state.tasks.find((t) => t.id === id)
+        : state.issues.find((i) => i.id === id))
+    : null;
+
   const descEl = $("edit-description");
   const assigneeEl = $("edit-assignee");
 
@@ -559,7 +568,6 @@ function saveEdit() {
     payload.linkWithCodebase = linkEl?.value?.trim() || null;
 
     // Preserve existing blocked state if element is removed from UI
-    const item = id ? state.tasks.find((t) => t.id === id) : null;
     payload.isBlocked = blockedEl ? blockedEl.checked : (item?.isBlocked ?? false);
   }
 
