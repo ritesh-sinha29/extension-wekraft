@@ -106,9 +106,8 @@ function onAuthState(auth) {
   if (u) {
     userName.textContent = u.name || "Member";
 
-    const plan = (u.accountType || "free").toLowerCase();
-    userRole.textContent = plan.toUpperCase() + " PLAN";
-    userRole.className = `user-role plan-badge plan-${plan}`;
+    userRole.textContent = "MEMBER";
+    userRole.className = "user-role plan-badge plan-member";
 
     if (u.avatarUrl) {
       userAvatar.innerHTML = `<img src="${esc(u.avatarUrl)}" alt="Avatar" class="mini-avatar-img" style="width:32px; height:32px; border-radius:50%;" />`;
@@ -137,6 +136,7 @@ function onProjectsLoaded(projects) {
     selectProject.appendChild(opt);
   });
   state.projectId = projects[0].id;
+  updateUserRoleForSelectedProject();
   loadAll();
 }
 
@@ -149,6 +149,22 @@ function onSprintsLoaded(sprints) {
     opt.textContent = icon + s.name;
     selectSprint.appendChild(opt);
   });
+}
+
+function updateUserRoleForSelectedProject() {
+  if (!state.projectId || !state.auth.user) return;
+  const currentProj = state.projects.find((p) => p.id === state.projectId);
+  if (currentProj) {
+    if (currentProj.ownerId === state.auth.user.id) {
+      userRole.textContent = "OWNER";
+      userRole.className = "user-role plan-badge plan-owner";
+    } else {
+      const myMember = state.teamMembers.find((m) => m.user?.id === state.auth.user.id);
+      const role = myMember ? myMember.role || "member" : "member";
+      userRole.textContent = role.toUpperCase();
+      userRole.className = `user-role plan-badge plan-${role}`;
+    }
+  }
 }
 
 function loadAll() {
@@ -165,6 +181,7 @@ selectProject.addEventListener("change", () => {
   state.sprintId = "";
   selectSprint.value = "";
   closeEditPanel();
+  updateUserRoleForSelectedProject();
   loadAll();
 });
 
@@ -190,6 +207,7 @@ function onIssuesLoaded(issues) {
 function onTeamLoaded(members) {
   state.teamMembers = members;
   buildAssigneeSelect();
+  updateUserRoleForSelectedProject();
 
   if (members.length > 0) {
     teamSection.classList.remove("hidden");

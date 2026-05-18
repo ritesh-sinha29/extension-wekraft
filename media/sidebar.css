@@ -204,21 +204,27 @@ body {
   width: fit-content;
 }
 
-.plan-free {
-  background: var(--vscode-editor-inactiveSelectionBackground);
-  color: var(--vscode-descriptionForeground);
+.plan-owner {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(139, 92, 246, 0.2));
+  color: #f472b6;
+  border: 1px solid rgba(236, 72, 153, 0.3);
 }
 
-.plan-plus {
+.plan-admin {
   background: rgba(99, 102, 241, 0.2);
   color: #818cf8;
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
-.plan-pro {
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(139, 92, 246, 0.2));
-  color: #f472b6;
-  border: 1px solid rgba(236, 72, 153, 0.3);
+.plan-member {
+  background: var(--vscode-editor-inactiveSelectionBackground);
+  color: var(--vscode-descriptionForeground);
+}
+
+.plan-viewer {
+  background: var(--vscode-editor-inactiveSelectionBackground);
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.8;
 }
 
 /* ── Sections / labels ───────────────────────────────────── */
