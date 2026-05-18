@@ -114,6 +114,20 @@ export class ConvexClient {
     }
   }
 
+  /**
+   * POST /ext/tasks/:taskId/mark-as-issue
+   */
+  async markTaskAsIssue(taskId: string): Promise<string> {
+    const res = await this._post<{ issueId: string }>(
+      `/ext/tasks/${encodeURIComponent(taskId)}/mark-as-issue`,
+      {}
+    );
+    if (!res.success || !res.data) {
+      throw new Error(res.error ?? "Failed to mark task as issue");
+    }
+    return res.data.issueId;
+  }
+
   // ── Issues ────────────────────────────────────────────────
 
   /** GET /ext/issues?projectId=<id> */

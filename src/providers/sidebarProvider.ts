@@ -148,6 +148,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         );
         break;
 
+      case "MARK_TASK_AS_ISSUE":
+        await this._run(
+          () => this.convexClient.markTaskAsIssue(msg.payload.taskId),
+          () => {
+            this._post({ type: "TASK_MARKED_AS_ISSUE", payload: { taskId: msg.payload.taskId } });
+          }
+        );
+        break;
+
       case "UPDATE_ISSUE":
         await this._run(
           () => this.convexClient.updateIssue(msg.payload),
@@ -401,6 +410,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           <div id="repo-tree" style="font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
             <!-- Tree nodes loaded dynamically -->
           </div>
+        </div>
+      </div>
+
+      <!-- Blocked / Mark as Issue (only for tasks) -->
+      <div id="task-blocked-row" class="field" style="margin-top: 12px;">
+        <div class="blocked-row">
+          <label class="label" style="margin: 0; display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><rect width="8" height="14" x="8" y="5" rx="4"/><path d="M19 7a1 1 0 0 0-1-1h-2M18 11.66A8 8 0 0 0 16 10M20 18a4 4 0 0 0-4-3.5M5 7a1 1 0 0 1 1-1h2M6 11.66A8 8 0 0 1 8 10M4 18a4 4 0 0 1 4-3.5M9 5a3 3 0 0 1 6 0M12 19v3M20 15h2M2 15h2"/></svg>
+            Mark as Issue
+          </label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="edit-is-blocked" />
+            <span class="toggle-slider"></span>
+          </label>
         </div>
       </div>
 

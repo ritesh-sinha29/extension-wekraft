@@ -83,6 +83,10 @@ window.addEventListener("message", ({ data: msg }) => {
     case "TEAM_MEMBERS_LOADED": onTeamLoaded(msg.payload); break;
     case "TASK_CREATED": onTaskCreated(msg.payload); break;
     case "TASK_UPDATED": onTaskUpdated(msg.payload); break;
+    case "TASK_MARKED_AS_ISSUE":
+      loadAll();
+      closeEditPanel();
+      break;
     case "TASK_DELETED": onTaskDeleted(msg.payload.taskId); break;
     case "ISSUE_UPDATED": onIssueUpdated(msg.payload); break;
     case "ISSUE_DELETED": onIssueDeleted(msg.payload.issueId); break;
@@ -234,6 +238,11 @@ function onTaskCreated(task) {
     renderItems();
   }
   closeEditPanel();
+
+  if (state.pendingMarkAsIssue) {
+    state.pendingMarkAsIssue = false;
+    post({ type: "MARK_TASK_AS_ISSUE", payload: { taskId: task.id } });
+  }
 }
 
 function onTaskUpdated(task) {
@@ -313,7 +322,7 @@ function itemCardHtml(item) {
       <div class="item-dot" style="background:${dotColor}"></div>
       <div class="item-body">
         <div class="item-title" title="${esc(item.title)}">
-          ${item.isBlocked ? '⚠️ ' : ''}${esc(item.title)}
+          ${item.isBlocked ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; display: inline-block;"><rect width="8" height="14" x="8" y="5" rx="4"/><path d="M19 7a1 1 0 0 0-1-1h-2M18 11.66A8 8 0 0 0 16 10M20 18a4 4 0 0 0-4-3.5M5 7a1 1 0 0 1 1-1h2M6 11.66A8 8 0 0 1 8 10M4 18a4 4 0 0 1 4-3.5M9 5a3 3 0 0 1 6 0M12 19v3M20 15h2M2 15h2"/></svg>` : ''}${esc(item.title)}
           ${item.type && item.type.label ? `<span style="font-size: 9px; padding: 2px 4px; border-radius: 4px; margin-left: 6px; background-color: ${esc(item.type.color)}33; color: ${esc(item.type.color)}; border: 1px solid ${esc(item.type.color)}55;">${esc(item.type.label)}</span>` : ''}
           ${item.linkWithCodebase ? `<span title="Linked to: ${esc(item.linkWithCodebase)}" style="font-size: 10px; margin-left: 6px; opacity: 0.6;">🔗</span>` : ''}
         </div>
@@ -447,6 +456,13 @@ function openEditPanel(type, id) {
     // Link with codebase
     const linkEl = $("edit-link-codebase");
     if (linkEl) linkEl.value = item?.linkWithCodebase ?? "";
+
+    // Blocked toggle (Mark as Issue)
+    const blockedEl = $("edit-is-blocked");
+    if (blockedEl) {
+      blockedEl.checked = !!item?.isBlocked;
+      blockedEl.disabled = !!item?.isBlocked;
+    }
   }
 
   buildAvatarAssigneeSelect(item?.assigneeId);
@@ -556,13 +572,23 @@ function saveEdit() {
         const now = Date.now();
         payload.estimation = { startDate: now, endDate: now + 86400000 * 7 };
       }
+      const blockedEl = $("edit-is-blocked");
+      state.pendingMarkAsIssue = blockedEl ? blockedEl.checked : false;
+
       post({ type: "CREATE_TASK", payload });
       editTitle.disabled = true;
       btnSaveEdit.disabled = true;
     }
   } else {
     if (type === "task") {
+      const wasBlocked = item?.isBlocked ?? false;
+      const nowBlocked = payload.isBlocked ?? false;
+
       post({ type: "UPDATE_TASK", payload: { taskId: id, ...payload } });
+
+      if (nowBlocked && !wasBlocked) {
+        post({ type: "MARK_TASK_AS_ISSUE", payload: { taskId: id } });
+      }
     } else {
       post({ type: "UPDATE_ISSUE", payload: { issueId: id, ...payload } });
     }

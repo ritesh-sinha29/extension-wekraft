@@ -182,6 +182,7 @@ export type WebviewToExtensionMessage =
   | { type: "FETCH_TEAM_MEMBERS"; payload: { projectId: string } }
   | { type: "CREATE_TASK"; payload: CreateTaskInput }
   | { type: "UPDATE_TASK"; payload: UpdateTaskInput }
+  | { type: "MARK_TASK_AS_ISSUE"; payload: { taskId: string } }
   | { type: "DELETE_TASK"; payload: { taskId: string } }
   | { type: "UPDATE_ISSUE"; payload: UpdateIssueInput }
   | { type: "FETCH_REPO_STRUCTURE"; payload: { repoFullName?: string } }
@@ -196,6 +197,7 @@ export type ExtensionToWebviewMessage =
   | { type: "TEAM_MEMBERS_LOADED"; payload: TeamMember[] }
   | { type: "TASK_CREATED"; payload: Task }
   | { type: "TASK_UPDATED"; payload: Task }
+  | { type: "TASK_MARKED_AS_ISSUE"; payload: { taskId: string } }
   | { type: "TASK_DELETED"; payload: { taskId: string } }
   | { type: "ISSUE_UPDATED"; payload: Issue }
   | { type: "ISSUE_DELETED"; payload: { issueId: string } }
