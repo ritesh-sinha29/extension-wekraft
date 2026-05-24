@@ -43,6 +43,8 @@ export interface Project {
   createdAt: number;
   ownerId?: string;
   repoFullName?: string;
+  /** Unix timestamp (ms) — fetched from projectDetails.targetDate */
+  projectDeadline?: number | null;
 }
 
 // ── Sprints ───────────────────────────────────────────────────

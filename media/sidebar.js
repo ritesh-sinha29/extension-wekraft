@@ -76,8 +76,8 @@ const ICONS = {
   production: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
   project: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
   sprint: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d4d4d8" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-  task: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`,
-  issue: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><rect width="8" height="14" x="8" y="5" rx="4"/><path d="M19 7a1 1 0 0 0-1-1h-2M18 11.66A8 8 0 0 0 16 10M20 18a4 4 0 0 0-4-3.5M5 7a1 1 0 0 1 1-1h2M6 11.66A8 8 0 0 1 8 10M4 18a4 4 0 0 1 4-3.5M9 5a3 3 0 0 1 6 0M12 19v3M20 15h2M2 15h2"/></svg>`
+  task: `<svg width="16" height="16" viewBox="0 0 24 24" fill="#1447E6"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8" cy="9" r="1.5" fill="white" /><path d="M11 9h5" stroke="white" stroke-width="2" stroke-linecap="round" /><circle cx="8" cy="15" r="1.5" fill="white" /><path d="M11 15h5" stroke="white" stroke-width="2" stroke-linecap="round" /></svg>`,
+  issue: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="6" /><path d="M12 7a3 3 0 0 0-3-3h6a3 3 0 0 0-3 3z" fill="#ef4444" /><line x1="12" y1="7" x2="12" y2="19" /><path d="M9 4C9 3 8 2.5 8 2.5M15 4C15 3 16 2.5 16 2.5" /><path d="M6 10H3.5M5 14H2.5M6 18H3.5M18 10h2.5M19 14h2.5M18 18h2.5" /><circle cx="9.5" cy="11.5" r="0.8" fill="#ef4444" /><circle cx="14.5" cy="11.5" r="0.8" fill="#ef4444" /><circle cx="9.5" cy="15.5" r="0.8" fill="#ef4444" /><circle cx="14.5" cy="15.5" r="0.8" fill="#ef4444" /></svg>`
 };
 
 
@@ -91,6 +91,9 @@ const screenMain    = $("screen-main");
 
 const btnLogin   = $("btn-login");
 const btnLogout  = $("btn-logout");
+const btnThemeToggle = $("btn-theme-toggle");
+const iconSun = $("icon-sun");
+const iconMoon = $("icon-moon");
 const userAvatar = $("user-avatar");
 const userName   = $("user-name");
 const userRole   = $("user-role");
@@ -238,12 +241,55 @@ function onProjectsLoaded(projects) {
     if (selectSprint) selectSprint.value = "";
     closeEditPanel();
     updateUserRoleForSelectedProject();
+    updateProjectDeadline();
     loadAll();
   });
 
   updateUserRoleForSelectedProject();
+  updateProjectDeadline();
   loadAll();
 }
+
+function formatDeadlineDate(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  const day = d.getDate();
+  const year = d.getFullYear();
+  const month = d.toLocaleDateString("en-US", { month: "short" });
+  
+  let suffix = "th";
+  if (day === 1 || day === 21 || day === 31) suffix = "st";
+  else if (day === 2 || day === 22) suffix = "nd";
+  else if (day === 3 || day === 23) suffix = "rd";
+  
+  return `${month} ${day}${suffix}, ${year}`;
+}
+
+function updateProjectDeadline() {
+  const container = document.getElementById("project-deadline-container");
+  const textEl = document.getElementById("project-deadline-text");
+  if (!container || !textEl) return;
+  
+  if (!state.projectId || !state.projects) {
+    container.style.display = "none";
+    return;
+  }
+  
+  const proj = state.projects.find(p => (p.id || p._id) === state.projectId);
+  const deadline = proj?.projectDeadline || proj?.endDate || proj?.dueDate || proj?.deadline || proj?.targetDate;
+  
+  container.style.display = ""; // Always show the section
+  
+  if (deadline) {
+    textEl.textContent = formatDeadlineDate(deadline);
+    textEl.classList.remove("muted");
+  } else {
+    textEl.textContent = "No deadline set";
+    textEl.classList.add("muted");
+  }
+}
+
 
 function onSprintsLoaded(sprints) {
   if (!selectSprint) return;
@@ -281,8 +327,7 @@ function onSprintsLoaded(sprints) {
   setupCustomDropdown("select-sprint", opts, (val) => {
     state.sprintId = val;
     if (state.activeView === "tasks") {
-      state.tasks = [];
-      renderItems();
+      // Don't wipe tasks immediately — keep current list visible while new data loads
       loadAll();
     }
   });
@@ -323,7 +368,13 @@ function nextEpoch() {
 function loadAll() {
   if (!state.projectId) return;
   const epoch = nextEpoch();
-  showScreen("loading");
+  // Only show the loading skeleton on the FIRST load (when we have nothing to display).
+  // For all subsequent refreshes (tab switch, sprint change, project change), we keep
+  // the current content visible and update it silently — no more flash of loading screen.
+  const hasExistingData = state.tasks.length > 0 || state.issues.length > 0;
+  if (!hasExistingData && screenLoading && screenMain && screenMain.classList.contains("hidden")) {
+    showScreen("loading");
+  }
   post({ type: "FETCH_SPRINTS",      payload: { projectId: state.projectId } });
   post({ type: "FETCH_TASKS",        payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch } });
   post({ type: "FETCH_ISSUES",       payload: { projectId: state.projectId, epoch } });
@@ -332,15 +383,30 @@ function loadAll() {
 
 function loadAllSilent() {
   if (!state.projectId || !state.auth?.isAuthenticated || state.editing) return;
+  
+  // Smart polling: Do not spam the server if this VS Code window/tab is hidden in the background
+  if (document.hidden) return;
+
   // Silent polls do NOT change the epoch — they carry the current epoch.
   // This means if a silent poll response is stale it will still overwrite,
   // but we accept that tradeoff. The epoch only protects cross-loadAll races.
+  post({ type: "FETCH_PROJECTS" });
   post({ type: "FETCH_TASKS",   payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch: state.fetchEpoch } });
   post({ type: "FETCH_ISSUES",  payload: { projectId: state.projectId, epoch: state.fetchEpoch } });
 }
 
 // Background polling — real-time sync, 8s interval (not 5s — reduce server load at scale)
 setInterval(loadAllSilent, 8000);
+
+// Instantly refresh data when the user switches back to this VS Code window or tab
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    loadAllSilent();
+  }
+});
+window.addEventListener("focus", () => {
+  loadAllSilent();
+});
 
 // Custom dropdowns handle their own onChange events.
 
@@ -354,15 +420,10 @@ function onTasksLoaded(tasks, epoch) {
   // Discard stale responses from a superseded fetch cycle
   if (epoch !== undefined && epoch !== state.fetchEpoch) return;
   state.tasks = Array.isArray(tasks) ? tasks : [];
+  // Always ensure the main screen is visible — never stay on loading screen
+  showScreen("main");
   if (state.activeView === "tasks") {
     renderItems();
-    showScreen("main");
-  } else {
-    // Background — just update data; render on tab switch
-    // But also show main if we were on loading screen
-    if (screenLoading && !screenLoading.classList.contains("hidden")) {
-      showScreen("main");
-    }
   }
 }
 
@@ -373,13 +434,10 @@ function onTasksLoaded(tasks, epoch) {
 function onIssuesLoaded(issues, epoch) {
   if (epoch !== undefined && epoch !== state.fetchEpoch) return;
   state.issues = Array.isArray(issues) ? issues : [];
+  // Always ensure the main screen is visible
+  showScreen("main");
   if (state.activeView === "issues") {
     renderItems();
-    showScreen("main");
-  } else {
-    if (screenLoading && !screenLoading.classList.contains("hidden")) {
-      showScreen("main");
-    }
   }
 }
 
@@ -601,14 +659,12 @@ function formatDateRange(startTs, endTs) {
   if (endDate && Number.isNaN(endDate.getTime())) return "";
 
   if (startDate && endDate) {
-    const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
     const startMonth = startDate.toLocaleDateString("en-US", { month: "short" });
     const endMonth = endDate.toLocaleDateString("en-US", { month: "short" });
     const startDay = startDate.getDate();
     const endDay = endDate.getDate();
-    if (sameMonth) {
-      if (startDay === endDay) return `${startMonth} ${startDay}`;
-      return `${startMonth} ${startDay}-${endDay}`;
+    if (startMonth === endMonth && startDay === endDay && startDate.getFullYear() === endDate.getFullYear()) {
+      return `${startMonth} ${startDay}`;
     }
     return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
   }
@@ -1078,14 +1134,7 @@ function saveEdit() {
         endEl.focus();
         return;
       }
-      if (item && ("startDate" in item || "start_date" in item)) {
-        payload.startDate = startT;
-        payload.endDate = endT;
-      } else if (item && "duration" in item) {
-        payload.duration = { startDate: startT, endDate: endT };
-      } else {
-        payload.estimation = { startDate: startT, endDate: endT };
-      }
+      payload.estimation = { startDate: startT, endDate: endT };
     }
 
     const tagLabel = typeLbl?.value?.trim();
@@ -1361,6 +1410,33 @@ function esc(/** @type {any} */ str) {
 // ── Wire up static buttons ────────────────────────────────────
 
 btnLogin?.addEventListener("click",   () => post({ type: "LOGIN_REQUEST" }));
+
+// ── Theme Management ──────────────────────────────────────────
+
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+    if (iconSun) iconSun.style.display = "none";
+    if (iconMoon) iconMoon.style.display = "block";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    if (iconSun) iconSun.style.display = "block";
+    if (iconMoon) iconMoon.style.display = "none";
+  }
+}
+
+// Load saved theme on startup
+const savedState = vscode.getState() || {};
+const initialTheme = savedState.theme || "dark";
+applyTheme(initialTheme);
+
+btnThemeToggle?.addEventListener("click", () => {
+  const currentState = vscode.getState() || {};
+  const newTheme = document.documentElement.hasAttribute("data-theme") ? "dark" : "light";
+  applyTheme(newTheme);
+  vscode.setState({ ...currentState, theme: newTheme });
+});
+
 btnLogout?.addEventListener("click",  () => post({ type: "LOGOUT_REQUEST" }));
 btnSaveEdit?.addEventListener("click",  saveEdit);
 btnCloseEdit?.addEventListener("click", closeEditPanel);

@@ -321,6 +321,24 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           <span class="user-role plan-badge plan-free" id="user-role">FREE PLAN</span>
         </div>
       </div>
+      <button id="btn-theme-toggle" class="btn-icon" title="Toggle Theme" style="margin-right: 4px;">
+        <!-- Moon Icon (Default Dark) -->
+        <svg id="icon-moon" style="display: none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <!-- Sun Icon (For Light Mode) -->
+        <svg id="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
       <button id="btn-logout" class="btn-icon" title="Sign out">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2">
@@ -347,6 +365,39 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           <input type="hidden" id="select-project" />
         </div>
       </div>
+      
+      <!-- Project Deadline UI -->
+      <div id="project-deadline-container" class="deadline-card" style="display: none;">
+        <div class="deadline-content">
+          <div class="deadline-left">
+            <div class="deadline-icon-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="url(#deadlineGradient)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <defs>
+                  <linearGradient id="deadlineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f472b6" />
+                    <stop offset="100%" stop-color="#d946ef" />
+                  </linearGradient>
+                </defs>
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div class="deadline-info">
+              <span class="deadline-label">Project Deadline</span>
+              <span id="project-deadline-text" class="deadline-text"></span>
+            </div>
+          </div>
+          <div class="deadline-right-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" y2="6"/>
+              <line x1="8" x2="8" y1="2" y2="6"/>
+              <line x1="3" x2="21" y1="10" y2="10"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <div class="field">
         <label class="label">Sprint</label>
         <div class="wk-select-wrapper" id="wrapper-select-sprint">
@@ -527,7 +578,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       <!-- Blocked / Mark as Issue (only for tasks) -->
       <div id="task-blocked-row" class="ep-toggle-row">
         <label class="ep-label" style="margin:0; display:flex; align-items:center; gap:6px; color:#a3a3a3;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="14" x="8" y="5" rx="4"/><path d="M19 7a1 1 0 0 0-1-1h-2M18 11.66A8 8 0 0 0 16 10M20 18a4 4 0 0 0-4-3.5M5 7a1 1 0 0 1 1-1h2M6 11.66A8 8 0 0 1 8 10M4 18a4 4 0 0 1 4-3.5M9 5a3 3 0 0 1 6 0M12 19v3M20 15h2M2 15h2"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="6" /><path d="M12 7a3 3 0 0 0-3-3h6a3 3 0 0 0-3 3z" fill="#ef4444" /><line x1="12" y1="7" x2="12" y2="19" /><path d="M9 4C9 3 8 2.5 8 2.5M15 4C15 3 16 2.5 16 2.5" /><path d="M6 10H3.5M5 14H2.5M6 18H3.5M18 10h2.5M19 14h2.5M18 18h2.5" /><circle cx="9.5" cy="11.5" r="0.8" fill="#ef4444" /><circle cx="14.5" cy="11.5" r="0.8" fill="#ef4444" /><circle cx="9.5" cy="15.5" r="0.8" fill="#ef4444" /><circle cx="14.5" cy="15.5" r="0.8" fill="#ef4444" /></svg>
           Mark as Issue
         </label>
         <label class="toggle-switch">
