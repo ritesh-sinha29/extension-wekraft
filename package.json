@@ -1,5 +1,5 @@
 {
-  "name": "wekraft-vscode",
+  "name": "wekraft",
   "displayName": "Wekraft",
   "description": "Project management for your IDE — tasks, sprints, issues, and team collaboration powered by Wekraft.",
   "version": "0.0.1",
@@ -97,7 +97,7 @@
         },
         "wekraft.webAppUrl": {
           "type": "string",
-          "default": "http://localhost:3000",
+          "default": "https://wekraft.xyz",
           "description": "Wekraft web app URL (used to open the login/grant-access page)"
         }
       }

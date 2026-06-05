@@ -8,7 +8,7 @@ import { AuthState, WekraftUser, HandshakeExchangeResult } from "../types";
 //
 //  LOGIN
 //  1. Open browser →
-//       http://localhost:3000/extension?callback_url=vscode://wekraft.wekraft-vscode/auth
+//       https://wekraft.xyz/extension?callback_url=vscode://wekraft.wekraft-vscode/auth
 //  2. User grants access on the web app.
 //  3. Web app calls createHandshakeToken() — 5-min TTL, one-time-use hex token.
 //  4. Browser redirects →
@@ -135,13 +135,17 @@ export class AuthManager {
           if (!result.user) {
             const siteUrl = this._cfg("convexSiteUrl");
             if (siteUrl) {
+              // FIX-03: Add 15 s timeout to prevent the sign-in modal hanging forever
+              const controller = new AbortController();
+              const meTimeoutId = setTimeout(() => controller.abort(), 15_000);
               try {
                 const meResponse = await fetch(`${siteUrl}/ext/me`, {
                   method: "GET",
                   headers: {
                     Authorization: `Bearer ${result.apiKey}`,
-                    "X-Wekraft-Client": "vscode-extension/0.0.1",
+                    "X-Wekraft-Client": "vscode-extension/login",
                   },
+                  signal: controller.signal,
                 });
                 if (meResponse.ok) {
                   const json = (await meResponse.json()) as {
@@ -159,7 +163,10 @@ export class AuthManager {
                   }
                 }
               } catch (e) {
-                console.error("[Wekraft] Failed to fetch user info on login:", e);
+                const isTimeout = (e as any)?.name === "AbortError";
+                console.error("[Wekraft] Failed to fetch user info on login:", isTimeout ? "timed out" : e);
+              } finally {
+                clearTimeout(meTimeoutId);
               }
             }
           }
@@ -222,29 +229,44 @@ export class AuthManager {
   ): Promise<HandshakeExchangeResult> {
     const convexUrl = this._cfg("convexUrl");
 
-    const response = await fetch(`${convexUrl}/api/mutation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        path: "apiKeys:exchangeHandshakeToken",
-        args: { token },
-        format: "json",
-      }),
-    });
+    // FIX-03: Abort if Convex takes longer than 15 s — prevents the sign-in modal hanging forever
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15_000);
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `HTTP ${response.status}`);
+    try {
+      const response = await fetch(`${convexUrl}/api/mutation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: "apiKeys:exchangeHandshakeToken",
+          args: { token },
+          format: "json",
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+
+      // Convex HTTP API wraps the return value in { value: ... }
+      const json = (await response.json()) as { value: HandshakeExchangeResult };
+
+      if (!json.value?.userId || !json.value?.apiKey) {
+        throw new Error("Invalid response from token exchange.");
+      }
+
+      return json.value;
+    } catch (err) {
+      const isTimeout = (err as any)?.name === "AbortError";
+      if (isTimeout) {
+        throw new Error("Sign-in timed out. Please check your connection and try again.");
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    // Convex HTTP API wraps the return value in { value: ... }
-    const json = (await response.json()) as { value: HandshakeExchangeResult };
-
-    if (!json.value?.userId || !json.value?.apiKey) {
-      throw new Error("Invalid response from token exchange.");
-    }
-
-    return json.value;
   }
 
   private async _persistSession(
@@ -287,9 +309,13 @@ export class AuthManager {
   }
 
   private _cfg(key: string): string {
-    return vscode.workspace
-      .getConfiguration("wekraft")
-      .get<string>(key, "");
+    // FIX-02: SECURITY — Read ONLY from user-level global configuration, never workspace.
+    // A malicious .vscode/settings.json in an opened repo could otherwise redirect
+    // API calls (including Bearer tokens) to an attacker-controlled server.
+    // This mirrors the same pattern used in ConvexClient._getSiteUrl().
+    const config = vscode.workspace.getConfiguration("wekraft");
+    const inspected = config.inspect<string>(key);
+    return inspected?.globalValue || inspected?.defaultValue || "";
   }
 
   dispose(): void {

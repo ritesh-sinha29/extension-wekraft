@@ -24,6 +24,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   private _view?: vscode.WebviewView;
 
+  // FIX: Prevent duplicate auth listeners accumulating across resolveWebviewView calls
+  private _authStateDisposable?: vscode.Disposable;
+
+  // FIX: Cache getMe() result for 5 min — matches convexClient's own TTL so
+  // the sidebar doesn't re-request getMe while convexClient has it cached.
+  private _lastMeFetch: number = 0;
+  private static readonly ME_CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly authManager: AuthManager,
@@ -53,8 +61,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       (msg: WebviewToExtensionMessage) => this._handle(msg)
     );
 
-    // Push auth state changes into the webview automatically
-    this.authManager.onAuthStateChanged((state) => {
+    // Push auth state changes into the webview automatically.
+    // Dispose any previous subscription so we don't accumulate listeners
+    // across multiple resolveWebviewView calls.
+    this._authStateDisposable?.dispose();
+    this._authStateDisposable = this.authManager.onAuthStateChanged((state) => {
       this._post({ type: "AUTH_STATE", payload: state });
     });
   }
@@ -76,9 +87,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         this._post({ type: "AUTH_STATE", payload: this.authManager.getAuthState() });
         this._sendWorkspaceFiles();
         if (this.authManager.isAuthenticated) {
-          this.convexClient.getMe().then((me) => {
-            if (me) this.authManager.updateUser(me);
-          }).catch(console.error);
+          // FIX: Only refresh user profile if the cached value is older than 60 s.
+          // Without this, every webview reload fires a redundant /ext/me DB call.
+          const now = Date.now();
+          if (now - this._lastMeFetch > SidebarProvider.ME_CACHE_TTL_MS) {
+            this._lastMeFetch = now;
+            this.convexClient.getMe().then((me) => {
+              if (me) this.authManager.updateUser(me);
+            }).catch(console.error);
+          }
         }
         break;
 
@@ -91,6 +108,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         break;
 
       case "LOGOUT_REQUEST":
+        // Wipe the in-memory cache so the next user doesn't see stale data.
+        this.convexClient.invalidateCache();
+        this._lastMeFetch = 0; // reset getMe guard
         await this.authManager.logout();
         break;
 
@@ -100,6 +120,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         await this._run(
           () => this.convexClient.getProjects(),
           (data) => this._post({ type: "PROJECTS_LOADED", payload: data })
+        );
+        break;
+
+      case "FETCH_PROJECT_DATA":
+        await this._run(
+          () => this.convexClient.getProjectData(msg.payload.projectId, msg.payload.sprintId),
+          (data) => {
+            const epoch = msg.payload.epoch;
+            this._post({ type: "SPRINTS_LOADED", payload: data.sprints });
+            this._post({ type: "TASKS_LOADED", payload: { tasks: data.tasks, epoch } });
+            this._post({ type: "ISSUES_LOADED", payload: { issues: data.issues, epoch } });
+            this._post({ type: "TICKETS_LOADED", payload: { tickets: data.tickets, epoch } });
+            this._post({ type: "TEAM_MEMBERS_LOADED", payload: data.teamMembers });
+          }
         );
         break;
 
@@ -790,8 +824,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       };
       const req = https.request(options, (res: any) => {
         let data = "";
-        res.on("data", (chunk: any) => data += chunk);
+        let truncated = false;
+        res.on("data", (chunk: any) => {
+          if (truncated) { return; }
+          data += chunk;
+          // FIX: Bail out if response exceeds 2 MB — prevents OOM on huge monorepos
+          if (data.length > 2_000_000) {
+            truncated = true;
+            resolve(null);
+          }
+        });
         res.on("end", () => {
+          if (truncated) { return; }
           if (res.statusCode >= 200 && res.statusCode < 300) {
             try {
               const json = JSON.parse(data);
