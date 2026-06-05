@@ -22,6 +22,8 @@ const state = {
   /** @type {any[]} */
   issues:       [],
   /** @type {any[]} */
+  tickets:      [],
+  /** @type {any[]} */
   teamMembers:  [],
   /** @type {string} */
   projectId:    "",
@@ -140,6 +142,8 @@ window.addEventListener("message", ({ data: msg }) => {
     case "TASK_DELETED":  onTaskDeleted(msg.payload.taskId); break;
     case "ISSUE_UPDATED": onIssueUpdated(msg.payload); break;
     case "ISSUE_DELETED": onIssueDeleted(msg.payload.issueId); break;
+    case "TICKETS_LOADED": onTicketsLoaded(msg.payload.tickets, msg.payload.epoch); break;
+    case "TICKET_UPDATED": onTicketUpdated(msg.payload); break;
     case "LOADING":
       if (msg.payload.isLoading) showScreen("loading");
       break;
@@ -245,6 +249,7 @@ function onProjectsLoaded(projects) {
   setupCustomDropdown("select-project", opts, (val) => {
     state.projectId = val;
     state.sprintId  = "";
+    state.tickets   = []; // clear stale tickets from previous project
     if (selectSprint) selectSprint.value = "";
     closeEditPanel();
     updateUserRoleForSelectedProject();
@@ -394,6 +399,7 @@ function loadAll() {
   post({ type: "FETCH_SPRINTS",      payload: { projectId: state.projectId } });
   post({ type: "FETCH_TASKS",        payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch } });
   post({ type: "FETCH_ISSUES",       payload: { projectId: state.projectId, epoch } });
+  post({ type: "FETCH_TICKETS",      payload: { projectId: state.projectId, epoch } });
   post({ type: "FETCH_TEAM_MEMBERS", payload: { projectId: state.projectId } });
 }
 
@@ -420,6 +426,7 @@ function loadAllSilent() {
   post({ type: "FETCH_PROJECTS" });
   post({ type: "FETCH_TASKS",   payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch } });
   post({ type: "FETCH_ISSUES",  payload: { projectId: state.projectId, epoch } });
+  post({ type: "FETCH_TICKETS", payload: { projectId: state.projectId, epoch } });
 }
 
 // Background polling — real-time sync, 8s interval
@@ -579,6 +586,12 @@ function onIssueDeleted(issueId) {
 
 function renderItems() {
   if (!itemList) return;
+
+  if (state.activeView === "tickets") {
+    renderTickets();
+    return;
+  }
+
   const items    = state.activeView === "tasks" ? state.tasks : state.issues;
   const filtered = state.activeStatus === "all"
     ? items
@@ -639,7 +652,111 @@ function renderItems() {
   });
 }
 
-// ── Tag badge helper ──────────────────────────────────────────
+function renderTickets() {
+  if (!itemList) return;
+
+  if (editPanel && editPanel.parentNode === itemList) {
+    const screenMainEl = document.getElementById("screen-main");
+    if (screenMainEl) screenMainEl.appendChild(editPanel);
+  }
+
+  if (!state.tickets || state.tickets.length === 0) {
+    itemList.innerHTML = `<div class="empty-state">No tickets assigned to or created by you.</div>`;
+    return;
+  }
+
+  itemList.innerHTML = state.tickets.map((t) => ticketCardHtml(t)).join("");
+
+  itemList.querySelectorAll(".ticket-card").forEach((card) => {
+    const ticketId = card.getAttribute("data-id") || "";
+    card.querySelector(".ticket-action-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const currentStatus = card.getAttribute("data-status") || "open";
+      const newStatus = currentStatus === "open" ? "closed" : "open";
+      updateTicketStatusLocally(ticketId, newStatus);
+    });
+  });
+}
+
+function ticketCardHtml(ticket) {
+  const isClosed = ticket.status === "closed";
+  const statusLabel = isClosed ? "CLOSED" : "OPEN";
+  const actionLabel = isClosed ? "Reopen" : "Close";
+
+  const dateStr = ticket.createdAt
+    ? new Date(ticket.createdAt).toLocaleDateString("en-US", {
+        month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit",
+      })
+    : "";
+
+  // ── Permission gate: only assignee or creator may toggle status ──
+  const currentUserId = state.auth.user?.id || state.auth.user?._id || "";
+  const canToggle = currentUserId && (
+    ticket.assignedTo === currentUserId || ticket.createdBy === currentUserId
+  );
+
+  // ── Assignee avatar ──
+  const assigneeName = ticket.assignee?.name || "Unassigned";
+  const assigneeAvatar = ticket.assignee?.avatarUrl
+    ? `<img src="${safeImgSrc(ticket.assignee.avatarUrl)}" class="ticket-person-avatar ticket-person-avatar--img" title="${esc(assigneeName)}" />`
+    : `<span class="ticket-person-avatar ticket-person-avatar--initial" title="${esc(assigneeName)}">${esc((assigneeName[0] || "?").toUpperCase())}</span>`;
+
+  // ── Creator avatar ──
+  const creatorName = ticket.creator?.name || "Unknown";
+  const creatorAvatar = ticket.creator?.avatarUrl
+    ? `<img src="${safeImgSrc(ticket.creator.avatarUrl)}" class="ticket-person-avatar ticket-person-avatar--img" title="${esc(creatorName)}" />`
+    : `<span class="ticket-person-avatar ticket-person-avatar--initial" title="${esc(creatorName)}">${esc((creatorName[0] || "?").toUpperCase())}</span>`;
+
+  const actionBtn = canToggle
+    ? `<button class="ticket-action-btn">${esc(actionLabel)}</button>`
+    : `<button class="ticket-action-btn ticket-action-btn--disabled" disabled title="Only the assignee or creator can change this ticket">${esc(actionLabel)}</button>`;
+
+  return /* html */ `
+    <div class="ticket-card" data-id="${esc(ticket.id || ticket._id)}" data-status="${esc(ticket.status)}">
+      <div class="ticket-header-row">
+        <div class="ticket-date">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          ${esc(dateStr)}
+        </div>
+        <div class="ticket-header-right">
+          <span class="ticket-status-badge ticket-status-badge--${esc(ticket.status)}">${esc(statusLabel)}</span>
+          ${actionBtn}
+        </div>
+      </div>
+      <div class="ticket-body">${esc(ticket.body || "No description")}</div>
+      <div class="ticket-people-row">
+        <div class="ticket-person">
+          <span class="ticket-person-label">Assignee:</span>
+          ${assigneeAvatar}
+        </div>
+        <div class="ticket-person">
+          <span class="ticket-person-label">Creator:</span>
+          ${creatorAvatar}
+        </div>
+      </div>
+    </div>`;
+}
+
+function onTicketsLoaded(tickets, epoch) {
+  if (epoch && epoch !== state.fetchEpoch) return;
+  state.tickets = tickets || [];
+  if (state.activeView === "tickets") renderItems();
+}
+
+function onTicketUpdated(ticket) {
+  if (!ticket) return;
+  const id = ticket.id || ticket._id;
+  state.tickets = state.tickets.map((t) => ((t.id || t._id) === id ? ticket : t));
+  if (state.activeView === "tickets") renderItems();
+}
+
+function updateTicketStatusLocally(ticketId, status) {
+  state.tickets = state.tickets.map((t) => ((t.id || t._id) === ticketId ? { ...t, status } : t));
+  post({ type: "UPDATE_TICKET", payload: { ticketId, status } });
+  renderItems();
+}
+
 
 /**
  * Validates hex colors strictly to prevent CSS injection.
@@ -1096,8 +1213,11 @@ function openEditPanel(type, id) {
       codebaseInput.setAttribute("placeholder", "Connect a repo first");
       codebaseInput.setAttribute("title", "No repository is connected to this project. Connect one via the Wekraft dashboard.");
       codebaseInput.classList.add("no-repo");
-      // Reset any previously picked value so a stale path isn't saved
-      if (!codebaseInput.value) codebaseInput.value = "";
+      codebaseInput.value = ""; // always clear stale path from previous project
+      // Clear the stale tree from the previous project immediately — without
+      // this the old file tree stays visible until the user refreshes.
+      rawWorkspaceFiles = [];
+      renderRepoTree([], repoTree);
     } else {
       // Repo is linked — unlock the picker
       codebaseRow.removeAttribute("data-no-repo");
@@ -1185,7 +1305,9 @@ function saveEdit() {
   }
 
   if (type === "task") {
-    payload.priority    = editPriority.value || undefined;
+    // Map no_priority sentinel → undefined (schema only allows high/medium/low)
+    const rawPriority = editPriority.value;
+    payload.priority    = (rawPriority && rawPriority !== "no_priority") ? rawPriority : undefined;
     payload.assigneeIds = assigneeIds;
 
     const startEl   = /** @type {HTMLInputElement|null} */ ($("edit-start-date"));
@@ -1213,8 +1335,11 @@ function saveEdit() {
     }
 
     const tagLabel = typeLbl?.value?.trim();
-    payload.type             = tagLabel ? { label: tagLabel, color: typeClr?.value || "blue" } : null;
-    payload.linkWithCodebase = linkEl?.value?.trim() || null;
+    // Map null → undefined for CREATE (schema requires object or absent, not null)
+    const typeVal = tagLabel ? { label: tagLabel, color: typeClr?.value || "blue" } : undefined;
+    payload.type             = typeVal;
+    // Map empty string/null → undefined for CREATE (schema: optional string, not null)
+    payload.linkWithCodebase = linkEl?.value?.trim() || undefined;
     payload.isBlocked        = blockedEl ? blockedEl.checked : (item?.isBlocked ?? false);
   } else {
     const dueDateEl = /** @type {HTMLInputElement|null} */ ($("edit-due-date"));
@@ -1386,6 +1511,12 @@ function confirmDelete(type, id) {
 
 function updateNewButtonLabel() {
   if (!btnNewItem || !btnNewItemLabel) return;
+  if (state.activeView === "tickets") {
+    // Tickets are created on the web app only — hide the button
+    btnNewItem.style.display = "none";
+    return;
+  }
+  btnNewItem.style.display = "";
   const label = state.activeView === "issues" ? "New Issue" : "New Task";
   btnNewItemLabel.textContent = label;
   btnNewItem.title = label;
@@ -1396,6 +1527,12 @@ function renderStatusTabs() {
   if (!container) return;
 
   updateNewButtonLabel();
+
+  // Tickets tab has no status filter bar
+  if (state.activeView === "tickets") {
+    container.innerHTML = "";
+    return;
+  }
 
   const statuses = state.activeView === "tasks"
     ? [
@@ -1436,10 +1573,14 @@ mainTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     mainTabs.forEach((t) => t.classList.remove("active"));
     tab.classList.add("active");
-    state.activeView   = tab.getAttribute("data-view") || "tasks";
+    state.activeView   = /** @type {"tasks"|"issues"|"tickets"} */ (tab.getAttribute("data-view") || "tasks");
     state.activeStatus = "all";
     renderStatusTabs();
     closeEditPanel();
+    // On first visit to tickets tab, lazily fetch data
+    if (state.activeView === "tickets" && state.tickets.length === 0 && state.projectId) {
+      post({ type: "FETCH_TICKETS", payload: { projectId: state.projectId, epoch: state.fetchEpoch } });
+    }
     renderItems();
   });
 });

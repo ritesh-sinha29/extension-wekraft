@@ -209,6 +209,23 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         );
         break;
 
+      case "FETCH_TICKETS":
+        await this._run(
+          () => this.convexClient.getTickets(msg.payload.projectId),
+          (data) => this._post({
+            type: "TICKETS_LOADED",
+            payload: { tickets: data, epoch: msg.payload.epoch }
+          })
+        );
+        break;
+
+      case "UPDATE_TICKET":
+        await this._run(
+          () => this.convexClient.updateTicket(msg.payload),
+          (data) => this._post({ type: "TICKET_UPDATED", payload: data })
+        );
+        break;
+
       case "REFRESH":
         this.refresh();
         break;
@@ -453,10 +470,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       <div id="team-avatars" class="team-avatars"></div>
     </div>
 
-    <!-- Main tabs: Tasks | Issues -->
+    <!-- Main tabs: Tasks | Issues | Tickets -->
     <div class="main-tabs">
       <button class="main-tab active" data-view="tasks">Tasks</button>
       <button class="main-tab" data-view="issues">Issues</button>
+      <button class="main-tab" data-view="tickets">Tickets</button>
     </div>
 
     <!-- Status filter tabs (shared by tasks & issues) -->
@@ -665,15 +683,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       let localMatched = false;
       let rootPath = "";
 
+      // Check ALL open workspace folders — user may have multiple repos open.
+      // Previously only [0] was checked, so if the target repo was any other
+      // folder it always fell through to GitHub API (fails for private repos).
       if (workspaceFolders && workspaceFolders.length > 0) {
-        rootPath = workspaceFolders[0].uri.fsPath;
-        // Only treat the open folder as matching when its git remote actually
-        // maps to the project's connected repo — never unconditionally.
-        const originUrl = this._getGitRemoteOrigin(rootPath);
-        if (originUrl) {
-          const remoteRepo = this._parseRepoFullName(originUrl);
-          if (remoteRepo && remoteRepo.toLowerCase() === repoFullName.toLowerCase()) {
-            localMatched = true;
+        for (const folder of workspaceFolders) {
+          const folderPath = folder.uri.fsPath;
+          const originUrl = this._getGitRemoteOrigin(folderPath);
+          if (originUrl) {
+            const remoteRepo = this._parseRepoFullName(originUrl);
+            if (remoteRepo && remoteRepo.toLowerCase() === repoFullName.toLowerCase()) {
+              rootPath = folderPath;
+              localMatched = true;
+              break;
+            }
           }
         }
       }
@@ -727,6 +750,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
         timeout: 3000,
+        shell: process.platform === "win32",  // required on Windows to resolve git.exe
       });
       if (result.status !== 0 || result.error) return null;
       return result.stdout?.trim() || null;

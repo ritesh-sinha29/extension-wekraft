@@ -195,6 +195,28 @@ export interface TeamMember {
   joinedAt: number;
 }
 
+// ── Tickets ───────────────────────────────────────────────────
+
+export type TicketStatus = "open" | "closed";
+
+export interface Ticket {
+  id: string;
+  projectId: string;
+  body: string;
+  status: TicketStatus;
+  createdAt: number;
+  updatedAt?: number;
+  createdBy?: string;    // raw userId — used to gate the Close/Reopen button
+  assignedTo?: string;   // raw userId — used to gate the Close/Reopen button
+  assignee?: { name: string; avatarUrl?: string } | null;
+  creator?: { name: string; avatarUrl?: string } | null;
+}
+
+export interface UpdateTicketInput {
+  ticketId: string;
+  status: TicketStatus;
+}
+
 // ── Generic API ───────────────────────────────────────────────
 
 export interface ApiResponse<T> {
@@ -215,6 +237,8 @@ export type WebviewToExtensionMessage =
   | { type: "FETCH_TASKS"; payload: { projectId: string; sprintId?: string; epoch?: number } }
   | { type: "FETCH_ISSUES"; payload: { projectId: string; epoch?: number } }
   | { type: "FETCH_TEAM_MEMBERS"; payload: { projectId: string } }
+  | { type: "FETCH_TICKETS"; payload: { projectId: string; epoch?: number } }
+  | { type: "UPDATE_TICKET"; payload: UpdateTicketInput }
   | { type: "CREATE_TASK"; payload: CreateTaskInput }
   | { type: "UPDATE_TASK"; payload: UpdateTaskInput }
   | { type: "MARK_TASK_AS_ISSUE"; payload: { taskId: string } }
@@ -233,6 +257,8 @@ export type ExtensionToWebviewMessage =
   | { type: "TASKS_LOADED"; payload: { tasks: Task[]; epoch?: number } }
   | { type: "ISSUES_LOADED"; payload: { issues: Issue[]; epoch?: number } }
   | { type: "TEAM_MEMBERS_LOADED"; payload: TeamMember[] }
+  | { type: "TICKETS_LOADED"; payload: { tickets: Ticket[]; epoch?: number } }
+  | { type: "TICKET_UPDATED"; payload: Ticket }
   | { type: "TASK_CREATED"; payload: Task }
   | { type: "TASK_UPDATED"; payload: Task }
   | { type: "TASK_MARKED_AS_ISSUE"; payload: { taskId: string } }
