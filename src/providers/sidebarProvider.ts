@@ -654,22 +654,27 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   private async _fetchRepoStructure(repoFullName?: string): Promise<void> {
     try {
+      // ── Production guard: if the project has no linked repo, send an empty
+      // tree immediately. Never fall through to expose the VS Code workspace.
+      if (!repoFullName) {
+        this._post({ type: "WORKSPACE_FILES", payload: [] });
+        return;
+      }
+
       const workspaceFolders = vscode.workspace.workspaceFolders;
       let localMatched = false;
       let rootPath = "";
 
       if (workspaceFolders && workspaceFolders.length > 0) {
         rootPath = workspaceFolders[0].uri.fsPath;
-        if (repoFullName) {
-          const originUrl = this._getGitRemoteOrigin(rootPath);
-          if (originUrl) {
-            const remoteRepo = this._parseRepoFullName(originUrl);
-            if (remoteRepo && remoteRepo.toLowerCase() === repoFullName.toLowerCase()) {
-              localMatched = true;
-            }
+        // Only treat the open folder as matching when its git remote actually
+        // maps to the project's connected repo — never unconditionally.
+        const originUrl = this._getGitRemoteOrigin(rootPath);
+        if (originUrl) {
+          const remoteRepo = this._parseRepoFullName(originUrl);
+          if (remoteRepo && remoteRepo.toLowerCase() === repoFullName.toLowerCase()) {
+            localMatched = true;
           }
-        } else {
-          localMatched = true;
         }
       }
 
@@ -679,37 +684,32 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      if (repoFullName) {
-        let token: string | undefined;
-        try {
-          const session = await vscode.authentication.getSession("github", ["repo"], { silent: true });
-          token = session?.accessToken;
-        } catch (e) {}
+      // Fetch from GitHub API using the linked repo name
+      let token: string | undefined;
+      try {
+        const session = await vscode.authentication.getSession("github", ["repo"], { silent: true });
+        token = session?.accessToken;
+      } catch (e) {}
 
-        const [owner, repoName] = repoFullName.split("/");
-        if (owner && repoName) {
-          let treeData = await this._getGitHubTree(owner, repoName, "main", token);
-          if (!treeData) {
-            treeData = await this._getGitHubTree(owner, repoName, "master", token);
-          }
+      const [owner, repoName] = repoFullName.split("/");
+      if (owner && repoName) {
+        let treeData = await this._getGitHubTree(owner, repoName, "main", token);
+        if (!treeData) {
+          treeData = await this._getGitHubTree(owner, repoName, "master", token);
+        }
 
-          if (treeData && Array.isArray(treeData)) {
-            const filtered = treeData.filter((item: any) => {
-              return !this._shouldSkipGitHubItem(item.path, item.type === "blob");
-            });
-            const parsedTree = this._buildTreeFromFlatList(filtered);
-            this._post({ type: "WORKSPACE_FILES", payload: parsedTree });
-            return;
-          }
+        if (treeData && Array.isArray(treeData)) {
+          const filtered = treeData.filter((item: any) => {
+            return !this._shouldSkipGitHubItem(item.path, item.type === "blob");
+          });
+          const parsedTree = this._buildTreeFromFlatList(filtered);
+          this._post({ type: "WORKSPACE_FILES", payload: parsedTree });
+          return;
         }
       }
 
-      if (rootPath) {
-        const fileTree = this._getWorkspaceFileTree(rootPath);
-        this._post({ type: "WORKSPACE_FILES", payload: fileTree });
-      } else {
-        this._post({ type: "WORKSPACE_FILES", payload: [] });
-      }
+      // GitHub API failed — send empty rather than leaking an unrelated workspace
+      this._post({ type: "WORKSPACE_FILES", payload: [] });
     } catch (err) {
       console.error("Error fetching repository structure:", err);
       this._post({ type: "WORKSPACE_FILES", payload: [] });

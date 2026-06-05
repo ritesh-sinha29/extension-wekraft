@@ -244,13 +244,14 @@ svg {
 
 /* Codebase link row: input + clear button side by side */
 .ep-codebase-row {
+  position: relative;   /* required for the no-repo ::after overlay */
   display: flex;
   gap: 0;
   align-items: stretch;
   border: 1px solid var(--border-color);
   border-radius: var(--wk-radius-sm);
   overflow: hidden;
-  transition: border-color var(--wk-transition);
+  transition: border-color var(--wk-transition), box-shadow var(--wk-transition);
 }
 
 .ep-codebase-row:focus-within {
@@ -276,6 +277,49 @@ svg {
 .ep-codebase-input::placeholder {
   color: var(--text-subtle);
   font-style: italic;
+}
+
+/* ── No-repo locked state ───────────────────────────────── */
+/* Applied via JS when activeProject.repoFullName is absent */
+[data-no-repo="true"] .ep-codebase-row {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.04);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.18);
+  cursor: not-allowed;
+}
+
+[data-no-repo="true"] .ep-codebase-row:focus-within {
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.14);
+}
+
+/* The input itself: red placeholder, locked cursor */
+.ep-codebase-input.no-repo {
+  cursor: not-allowed;
+  color: var(--text-muted);
+  pointer-events: none;    /* Prevent focus so the field truly feels locked */
+}
+
+.ep-codebase-input.no-repo::placeholder {
+  color: #f87171;          /* Tailwind red-400 — vivid but not alarming */
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Hide the clear button when there is nothing to clear */
+[data-no-repo="true"] .ep-clear-btn {
+  pointer-events: none;
+  opacity: 0.35;
+}
+
+/* Overlay the row wrapper so the click-guard fires even if the input has pointer-events:none */
+[data-no-repo="true"] .ep-codebase-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  cursor: not-allowed;
+  border-radius: inherit;
 }
 
 .ep-clear-btn {
@@ -665,13 +709,17 @@ svg {
 
 .main-tab:hover {
   background: var(--bg-hover-accent);
-  color: var(--text-main);
+  color: #ffffff;
 }
 
 .main-tab.active {
   background: var(--bg-active-tab);
-  color: var(--accent);
+  color: #ffffff;
   font-weight: 600;
+}
+
+.main-tab.active:hover {
+  color: #ffffff;
 }
 
 /* ── Item list ───────────────────────────────────────────── */
@@ -681,7 +729,7 @@ svg {
   flex-direction: column;
   gap: 4px;
   flex: 1;
-  overflow-y: auto;
+  overflow: visible;
   min-height: 80px;
 }
 
@@ -798,6 +846,7 @@ svg {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.1);
   z-index: 30;
 }
+
 
 .status-menu-item {
   display: flex;

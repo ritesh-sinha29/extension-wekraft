@@ -729,7 +729,11 @@ function closeStatusMenu() {
 
 document.addEventListener("click", (e) => {
   if (activeStatusMenu && activeStatusWrap) {
-    if (!activeStatusWrap.contains(/** @type {Node} */ (e.target))) {
+    // Close if click is outside both the wrap AND the floating menu
+    if (
+      !activeStatusWrap.contains(/** @type {Node} */ (e.target)) &&
+      !activeStatusMenu.contains(/** @type {Node} */ (e.target))
+    ) {
       closeStatusMenu();
     }
   }
@@ -769,6 +773,8 @@ function openStatusMenu(wrap, type, id, currentStatus) {
     });
   });
 
+  // Append inside the wrap so the menu scrolls with the sidebar naturally.
+  // overflow-y is removed from .item-list in CSS so nothing clips it.
   wrap.appendChild(menu);
   activeStatusMenu = menu;
   activeStatusWrap = wrap;
@@ -1079,7 +1085,29 @@ function openEditPanel(type, id) {
   if (repoSearch) repoSearch.value = "";
   const activeProj   = state.projects.find((p) => (p.id || p._id) === state.projectId);
   const repoFullName = activeProj?.repoFullName || "";
-  post({ type: "FETCH_REPO_STRUCTURE", payload: { repoFullName } });
+
+  // ── Codebase link: gate on repo connection ─────────────────────
+  const codebaseRow = /** @type {HTMLElement|null} */ ($("task-link-row"));
+  const codebaseInput = /** @type {HTMLInputElement|null} */ ($("edit-link-codebase"));
+  if (codebaseRow && codebaseInput) {
+    if (!repoFullName) {
+      // No repo linked to this project — lock the picker
+      codebaseRow.setAttribute("data-no-repo", "true");
+      codebaseInput.setAttribute("placeholder", "Connect a repo first");
+      codebaseInput.setAttribute("title", "No repository is connected to this project. Connect one via the Wekraft dashboard.");
+      codebaseInput.classList.add("no-repo");
+      // Reset any previously picked value so a stale path isn't saved
+      if (!codebaseInput.value) codebaseInput.value = "";
+    } else {
+      // Repo is linked — unlock the picker
+      codebaseRow.removeAttribute("data-no-repo");
+      codebaseInput.setAttribute("placeholder", "Click to pick a file\u2026");
+      codebaseInput.removeAttribute("title");
+      codebaseInput.classList.remove("no-repo");
+      // Only request the tree when a repo is actually connected
+      post({ type: "FETCH_REPO_STRUCTURE", payload: { repoFullName } });
+    }
+  }
 
   editPanel.classList.remove("hidden");
   editTitle.focus();
@@ -1519,6 +1547,13 @@ const repoStructureContainer = $("repo-structure-container");
 if (editLinkCodebase && repoStructureContainer) {
   editLinkCodebase.addEventListener("click", (e) => {
     e.stopPropagation();
+    // Guard: if no repo is connected, do nothing — the CSS already signals the locked state
+    const codebaseRow = /** @type {HTMLElement|null} */ ($("task-link-row"));
+    if (codebaseRow?.getAttribute("data-no-repo") === "true") {
+      // Ensure the dropdown stays closed
+      repoStructureContainer.classList.add("hidden");
+      return;
+    }
     repoStructureContainer.classList.toggle("hidden");
   });
   repoStructureContainer.addEventListener("click", (e) => e.stopPropagation());
