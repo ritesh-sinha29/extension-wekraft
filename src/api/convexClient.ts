@@ -9,6 +9,8 @@ import {
   UpdateTaskInput,
   CreateIssueInput,
   UpdateIssueInput,
+  Ticket,
+  UpdateTicketInput,
   ApiResponse,
 } from "../types";
 
@@ -201,6 +203,30 @@ export class ConvexClient {
     );
     if (!res.success) throw new Error(res.error ?? "Failed to fetch team members");
     return res.data ?? [];
+  }
+
+  // ── Tickets ──────────────────────────────────────────────
+
+  /** GET /ext/tickets?projectId=<id> — returns my tickets for a project */
+  async getTickets(projectId: string): Promise<Ticket[]> {
+    const res = await this._get<Ticket[]>(
+      `/ext/tickets?projectId=${encodeURIComponent(projectId)}`
+    );
+    if (!res.success) throw new Error(res.error ?? "Failed to fetch tickets");
+    return res.data ?? [];
+  }
+
+  /** PATCH /ext/tickets/:ticketId — close or reopen a ticket */
+  async updateTicket(input: UpdateTicketInput): Promise<Ticket> {
+    const { ticketId, ...fields } = input;
+    const res = await this._patch<Ticket>(
+      `/ext/tickets/${encodeURIComponent(ticketId)}`,
+      fields
+    );
+    if (!res.success || !res.data) {
+      throw new Error(res.error ?? "Failed to update ticket");
+    }
+    return res.data;
   }
 
   // ── HTTP helpers ─────────────────────────────────────────
