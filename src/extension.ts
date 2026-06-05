@@ -6,9 +6,9 @@ import { SidebarProvider } from "./providers/sidebarProvider";
 // ─────────────────────────────────────────────────────────────
 //  Extension entry point
 //
-//  URI scheme: vscode://wekraft.wekraft-vscode
+//  URI scheme: vscode://wekraft.wekraft
 //    ↑ publisher.name from package.json
-//  Auth callback: vscode://wekraft.wekraft-vscode/auth?token=<hex>
+//  Auth callback: vscode://wekraft.wekraft/auth?token=<hex>
 // ─────────────────────────────────────────────────────────────
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext): void {
   // ── URI Handler ───────────────────────────────────────────
   //
   //  Handles the deep-link redirect from the web app after login:
-  //    vscode://wekraft.wekraft-vscode/auth?token=<32-char-hex>
+  //    vscode://wekraft.wekraft/auth?token=<32-char-hex>
   //
   //  The token is short-lived (5 min) and single-use.
   //  It is exchanged for a permanent apiKey via Convex mutation.

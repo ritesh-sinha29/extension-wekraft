@@ -8,11 +8,11 @@ import { AuthState, WekraftUser, HandshakeExchangeResult } from "../types";
 //
 //  LOGIN
 //  1. Open browser →
-//       https://wekraft.xyz/extension?callback_url=vscode://wekraft.wekraft-vscode/auth
+//       https://wekraft.xyz/extension?callback_url=vscode://wekraft.wekraft/auth
 //  2. User grants access on the web app.
 //  3. Web app calls createHandshakeToken() — 5-min TTL, one-time-use hex token.
 //  4. Browser redirects →
-//       vscode://wekraft.wekraft-vscode/auth?token=<32-char-hex>
+//       vscode://wekraft.wekraft/auth?token=<32-char-hex>
 //  5. VS Code routes the URI to our registered UriHandler.
 //  6. Extension calls Convex mutation exchangeHandshakeToken({ token }).
 //     - Token is deleted in the same DB transaction (prevents replay attacks).
@@ -97,9 +97,9 @@ export class AuthManager {
     // Dynamically get the IDE's scheme (e.g., 'vscode', 'vscode-insiders', 'antigravity')
     const uriScheme = vscode.env.uriScheme;
     // The callback_url tells the web app where to redirect after token creation.
-    // Must match the URI scheme registered in package.json: wekraft.wekraft-vscode
+    // Must match the URI scheme registered in package.json: wekraft.wekraft
     const callbackUrl = encodeURIComponent(
-      `${uriScheme}://wekraft.wekraft-vscode/auth`
+      `${uriScheme}://wekraft.wekraft/auth`
     );
     const loginUrl = `${webAppUrl}/extension?callback_url=${callbackUrl}`;
 
@@ -113,7 +113,7 @@ export class AuthManager {
 
   /**
    * Called by the UriHandler in extension.ts when VS Code receives:
-   *   vscode://wekraft.wekraft-vscode/auth?token=<hex>
+   *   vscode://wekraft.wekraft/auth?token=<hex>
    */
   async handleHandshakeCallback(token: string): Promise<void> {
     const HEX_TOKEN_RE = /^[0-9a-fA-F]{32,128}$/;

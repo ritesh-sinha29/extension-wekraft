@@ -97,7 +97,7 @@
         },
         "wekraft.webAppUrl": {
           "type": "string",
-          "default": "https://wekraft.xyz",
+          "default": "http://localhost:3000",
           "description": "Wekraft web app URL (used to open the login/grant-access page)"
         }
       }
