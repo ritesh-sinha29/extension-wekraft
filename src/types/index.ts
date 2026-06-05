@@ -233,6 +233,7 @@ export type WebviewToExtensionMessage =
   | { type: "LOGOUT_REQUEST" }
   | { type: "REFRESH" }
   | { type: "FETCH_PROJECTS" }
+  | { type: "FETCH_PROJECT_DATA"; payload: { projectId: string; sprintId?: string; epoch?: number } }
   | { type: "FETCH_SPRINTS"; payload: { projectId: string } }
   | { type: "FETCH_TASKS"; payload: { projectId: string; sprintId?: string; epoch?: number } }
   | { type: "FETCH_ISSUES"; payload: { projectId: string; epoch?: number } }

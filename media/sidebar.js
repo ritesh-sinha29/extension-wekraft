@@ -396,11 +396,10 @@ function loadAll() {
   if (!hasExistingData && screenLoading && screenMain && screenMain.classList.contains("hidden")) {
     showScreen("loading");
   }
-  post({ type: "FETCH_SPRINTS",      payload: { projectId: state.projectId } });
-  post({ type: "FETCH_TASKS",        payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch } });
-  post({ type: "FETCH_ISSUES",       payload: { projectId: state.projectId, epoch } });
-  post({ type: "FETCH_TICKETS",      payload: { projectId: state.projectId, epoch } });
-  post({ type: "FETCH_TEAM_MEMBERS", payload: { projectId: state.projectId } });
+  post({
+    type: "FETCH_PROJECT_DATA",
+    payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch }
+  });
 }
 
 function loadAllSilent() {
@@ -424,17 +423,18 @@ function loadAllSilent() {
 
   const epoch = nextEpoch(); // Unique epoch for each poll to avoid races
   post({ type: "FETCH_PROJECTS" });
-  post({ type: "FETCH_TASKS",   payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch } });
-  post({ type: "FETCH_ISSUES",  payload: { projectId: state.projectId, epoch } });
-  post({ type: "FETCH_TICKETS", payload: { projectId: state.projectId, epoch } });
+  post({
+    type: "FETCH_PROJECT_DATA",
+    payload: { projectId: state.projectId, sprintId: state.sprintId || undefined, epoch }
+  });
 }
 
-// Background polling — real-time sync, 8s interval
+// Background polling — every 30 minutes
 let pollInterval = null;
 
 function startPolling() {
   if (pollInterval) clearInterval(pollInterval);
-  pollInterval = setInterval(loadAllSilent, 8000);
+  pollInterval = setInterval(loadAllSilent, 30 * 60 * 1000);
 }
 
 function stopPolling() {
@@ -443,16 +443,6 @@ function stopPolling() {
     pollInterval = null;
   }
 }
-
-// Instantly refresh data when the user switches back to this VS Code window or tab
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    loadAllSilent();
-  }
-});
-window.addEventListener("focus", () => {
-  loadAllSilent();
-});
 
 // Custom dropdowns handle their own onChange events.
 

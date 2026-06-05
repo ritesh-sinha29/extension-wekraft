@@ -19,6 +19,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const authManager = new AuthManager(context);
   const convexClient = new ConvexClient(() => authManager.apiKey);
 
+  // FIX: Push authManager onto subscriptions so dispose() is called on deactivation,
+  // cleaning up the onAuthStateChanged EventEmitter (prevents a memory leak).
+  context.subscriptions.push(authManager);
+
   // Restore session from OS keychain on startup (non-blocking)
   authManager.initialize().catch((err) =>
     console.error("[Wekraft] Failed to restore session:", err)
@@ -122,7 +126,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("wekraft.openWebApp", () => {
       const webAppUrl = vscode.workspace
         .getConfiguration("wekraft")
-        .get<string>("webAppUrl", "http://localhost:3000");
+        .get<string>("webAppUrl", "https://wekraft.xyz");
       vscode.env.openExternal(vscode.Uri.parse(webAppUrl));
     })
   );
