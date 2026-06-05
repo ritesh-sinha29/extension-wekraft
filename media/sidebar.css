@@ -48,7 +48,7 @@
   --bg-card: rgba(255, 255, 255, 0.025);
   --bg-card-solid: #18181C;
   --bg-hover-accent: rgba(255, 255, 255, 0.05);
-  --bg-active-tab: rgba(20, 71, 230, 0.15);
+  --bg-active-tab: rgba(255, 255, 255, 0.08);
   --text-main: #E4E4E7;
   --text-muted: #71717A;
   --text-subtle: #52525B;
@@ -56,12 +56,15 @@
   --icon-color: #52525B;
   --border-color: rgba(255, 255, 255, 0.07);
   --border-color-hover: rgba(255, 255, 255, 0.13);
-  --border-focus: rgba(20, 71, 230, 0.5);
+  --border-focus: rgba(255, 255, 255, 0.4);
   --input-bg: rgba(255, 255, 255, 0.04);
   --header-bg: rgba(255, 255, 255, 0.02);
   --text-title: #ffffff;
-  --accent: #1447E6;
-  --accent-muted: rgba(20, 71, 230, 0.12);
+  --accent: #ffffff;
+  --accent-hover: #e4e4e7;
+  --accent-muted: rgba(255, 255, 255, 0.08);
+  --accent-highlight: #ffffff;
+  --btn-text: #0d0d10;
 }
 
 [data-theme="light"] {
@@ -69,7 +72,7 @@
   --bg-card: #FFFFFF;
   --bg-card-solid: #FFFFFF;
   --bg-hover-accent: rgba(0, 0, 0, 0.04);
-  --bg-active-tab: rgba(20, 71, 230, 0.08);
+  --bg-active-tab: rgba(0, 0, 0, 0.05);
   --text-main: #18181B;
   --text-muted: #71717A;
   --text-subtle: #A1A1AA;
@@ -77,12 +80,15 @@
   --icon-color: #71717A;
   --border-color: rgba(0, 0, 0, 0.08);
   --border-color-hover: rgba(0, 0, 0, 0.15);
-  --border-focus: rgba(20, 71, 230, 0.35);
+  --border-focus: rgba(0, 0, 0, 0.4);
   --input-bg: rgba(0, 0, 0, 0.03);
   --header-bg: transparent;
   --text-title: #09090B;
-  --accent: #1447E6;
-  --accent-muted: rgba(20, 71, 230, 0.08);
+  --accent: #09090B;
+  --accent-hover: #27272a;
+  --accent-muted: rgba(0, 0, 0, 0.05);
+  --accent-highlight: #09090B;
+  --btn-text: #ffffff;
 }
 
 html,
@@ -418,6 +424,24 @@ svg {
   transform: rotate(180deg);
 }
 
+/* ── Dropdown animations ────────────────────────────────── */
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wk-select-dropdown:not(.hidden),
+.assignee-dropdown:not(.hidden),
+.status-menu {
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .wk-select-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -436,7 +460,7 @@ svg {
 .wk-select-option {
   display: flex;
   align-items: center;
-  padding: 4px 6px;
+  padding: 6px 8px;
   cursor: pointer;
   border-radius: 4px;
   color: var(--text-main);
@@ -466,8 +490,8 @@ svg {
 
 .wk-select-option.selected {
   background: var(--accent-muted);
-  color: var(--accent);
-  font-weight: 500;
+  color: var(--accent-highlight);
+  font-weight: 600;
 }
 
 /* ── Edit Panel Header ───────────────────────────────────────── */
@@ -570,7 +594,7 @@ svg {
 
 .tabs {
   display: flex;
-  gap: 2px;
+  gap: 4px;
   background: transparent;
   border-radius: 6px;
   padding: 2px 0;
@@ -580,23 +604,11 @@ svg {
   white-space: nowrap;
   flex-wrap: nowrap;
   scroll-behavior: smooth;
+  scrollbar-width: none; /* Hide scrollbar Firefox */
 }
 
-/* Custom thin scrollbar for the status tabs */
+/* Hide scrollbar Chrome/Safari/Webkit */
 .tabs::-webkit-scrollbar {
-  height: 2px;
-}
-.tabs::-webkit-scrollbar-track {
-  background: transparent;
-}
-.tabs::-webkit-scrollbar-thumb {
-  background: var(--border-color-hover);
-  border-radius: 2px;
-}
-.tabs::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-.tabs::-webkit-scrollbar-button {
   display: none;
 }
 
@@ -605,9 +617,9 @@ svg {
   padding: 4px 10px;
   font-size: 11px;
   font-weight: 500;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-muted);
   border-radius: 6px;
   cursor: pointer;
   transition: var(--wk-transition);
@@ -616,12 +628,14 @@ svg {
 
 .tab:hover {
   background: var(--bg-hover-accent);
-  color: #ffffff;
+  color: var(--text-main);
+  border-color: var(--border-color-hover);
 }
 
 .tab.active {
-  background: var(--bg-active-tab);
-  color: #ffffff;
+  background: var(--accent-muted);
+  color: var(--accent-highlight);
+  border-color: var(--accent);
   font-weight: 600;
 }
 
@@ -683,43 +697,47 @@ svg {
   color: var(--text-main);
 }
 
-/* ── Main tabs (Tasks | Issues) ─────────────────────────── */
+/* ── Main tabs (Tasks | Issues | Tickets) ─────────────────── */
 
 .main-tabs {
   display: flex;
-  gap: 4px;
+  gap: 0;
   background: transparent;
-  border-radius: var(--wk-radius);
+  border-bottom: 1px solid var(--border-color);
   padding: 0;
-  border: none;
+  border-radius: 0;
 }
 
 .main-tab {
   flex: 1;
-  padding: 6px 8px;
+  padding: 8px 4px;
   font-size: 12px;
   font-weight: 500;
   border: none;
   background: transparent;
   color: var(--text-muted);
-  border-radius: var(--wk-radius-sm);
+  border-radius: 0;
   cursor: pointer;
   transition: var(--wk-transition);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  text-align: center;
 }
 
 .main-tab:hover {
-  background: var(--bg-hover-accent);
-  color: #ffffff;
+  color: var(--text-title);
+  background: transparent;
 }
 
 .main-tab.active {
-  background: var(--bg-active-tab);
-  color: #ffffff;
+  background: transparent;
+  color: var(--accent-highlight);
+  border-bottom: 2px solid var(--accent);
   font-weight: 600;
 }
 
 .main-tab.active:hover {
-  color: #ffffff;
+  color: var(--accent-highlight);
 }
 
 /* ── Item list ───────────────────────────────────────────── */
@@ -829,7 +847,7 @@ svg {
 }
 
 .item-status:hover {
-  background: #132F6A !important;
+  background: var(--accent) !important;
   color: #ffffff !important;
   border-color: transparent !important;
 }
@@ -865,13 +883,13 @@ svg {
 }
 
 .status-menu-item:hover {
-  background: #132F6A !important;
+  background: var(--accent) !important;
   color: #ffffff !important;
 }
 
 .status-menu-item.active {
   background: var(--accent-muted);
-  color: var(--accent);
+  color: var(--accent-highlight);
   font-weight: 600;
 }
 
@@ -1139,15 +1157,15 @@ svg {
 
 .btn-primary {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--btn-text);
   border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 1px 4px rgba(20, 71, 230, 0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .btn-primary:hover {
-  background: #1340CC;
+  background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(20, 71, 230, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 #btn-save-edit.btn-primary:hover,
@@ -1572,8 +1590,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 [data-theme="light"] .tab.active {
-  background: var(--bg-active-tab);
+  background: var(--accent-muted);
   color: var(--accent);
+  border-color: var(--accent);
   font-weight: 600;
 }
 
