@@ -317,6 +317,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(media, "sidebar.js")
     );
+    const logoUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(media, "logo.svg")
+    );
 
     const nonce = this._nonce();
     const csp = [
@@ -346,7 +349,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   <!-- ░░ LOGIN ░░ -->
   <div id="screen-login" class="screen hidden">
     <div class="logo-wrap">
-      <div class="logo-icon">W</div>
+      <img src="${logoUri}" alt="Wekraft Logo" style="width: 48px; height: 48px; margin-bottom: 8px;" />
       <h1 class="logo-text">Wekraft</h1>
       <p class="tagline">Project management, right in your editor.</p>
     </div>

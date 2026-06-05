@@ -22,8 +22,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# User specified (Note: package.json is usually required in version control, but added per request)
-package.json
 
 # OS files
 .DS_Store

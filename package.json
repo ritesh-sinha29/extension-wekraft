@@ -1,0 +1,127 @@
+{
+  "name": "wekraft-vscode",
+  "displayName": "Wekraft",
+  "description": "Project management for your IDE — tasks, sprints, issues, and team collaboration powered by Wekraft.",
+  "version": "0.0.1",
+  "publisher": "wekraft",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "project management",
+    "tasks",
+    "sprints",
+    "issues",
+    "collaboration",
+    "wekraft"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wekraft/wekraft-extension"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "wekraft-sidebar",
+          "title": "Wekraft",
+          "icon": "media/activity-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "wekraft-sidebar": [
+        {
+          "type": "webview",
+          "id": "wekraft.sidebarView",
+          "name": "Wekraft",
+          "icon": "media/activity-icon.svg",
+          "contextualTitle": "Wekraft"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "wekraft.login",
+        "title": "Wekraft: Login"
+      },
+      {
+        "command": "wekraft.logout",
+        "title": "Wekraft: Logout"
+      },
+      {
+        "command": "wekraft.refresh",
+        "title": "Wekraft: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "wekraft.openWebApp",
+        "title": "Wekraft: Open Web App",
+        "icon": "$(link-external)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "wekraft.refresh",
+          "when": "view == wekraft.sidebarView",
+          "group": "navigation"
+        },
+        {
+          "command": "wekraft.openWebApp",
+          "when": "view == wekraft.sidebarView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Wekraft",
+      "properties": {
+        "wekraft.convexUrl": {
+          "type": "string",
+          "default": "https://determined-impala-236.eu-west-1.convex.cloud",
+          "description": "Wekraft Convex deployment URL (used for token exchange mutation)"
+        },
+        "wekraft.convexSiteUrl": {
+          "type": "string",
+          "default": "https://determined-impala-236.eu-west-1.convex.site",
+          "description": "Wekraft Convex HTTP Actions URL (used for authenticated API calls)"
+        },
+        "wekraft.webAppUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Wekraft web app URL (used to open the login/grant-access page)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {}
+}
