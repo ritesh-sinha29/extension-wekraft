@@ -759,7 +759,7 @@ svg {
   border-radius: var(--wk-radius);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  cursor: default;
+  cursor: pointer;
   transition: var(--wk-transition);
   position: relative;
 }
@@ -848,7 +848,7 @@ svg {
 
 .item-status:hover {
   background: var(--accent) !important;
-  color: #ffffff !important;
+  color: var(--btn-text) !important;
   border-color: transparent !important;
 }
 
@@ -884,7 +884,7 @@ svg {
 
 .status-menu-item:hover {
   background: var(--accent) !important;
-  color: #ffffff !important;
+  color: var(--btn-text) !important;
 }
 
 .status-menu-item.active {

@@ -984,7 +984,7 @@ function itemCardHtml(item) {
 const TASK_STATUSES    = ["not started", "inprogress", "reviewing", "testing", "completed"];
 const ISSUE_STATUSES   = ["not opened", "opened", "reopened", "closed"];
 const TASK_PRIORITIES  = ["no_priority", "high", "medium", "low"];
-const ISSUE_PRIORITIES = ["no_priority", "critical", "high", "medium", "low"];
+const ISSUE_PRIORITIES = ["no_priority", "critical", "medium", "low"];
 const ENVIRONMENTS     = ["local", "dev", "staging", "production"];
 
 // ── Custom Dropdown Engine ─────────────────────────────────────────────
@@ -1338,10 +1338,11 @@ function saveEdit() {
     const envEl = /** @type {HTMLInputElement|null} */ ($("edit-environment"));
     if (envEl?.value) payload.environment = envEl.value;
 
-    payload.severity = editPriority.value;
+    const rawSeverity = editPriority.value;
+    payload.severity  = (rawSeverity && rawSeverity !== "no_priority") ? rawSeverity : undefined;
 
     const linkEl = /** @type {HTMLInputElement|null} */ ($("edit-link-codebase"));
-    payload.fileLinked = linkEl?.value?.trim() || null;
+    payload.fileLinked = linkEl?.value?.trim() || undefined;
 
     payload.assignees = assigneeIds.map((uid) => {
       const member = state.teamMembers.find((m) => m.userId === uid);
